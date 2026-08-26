@@ -126,15 +126,17 @@ def anasayfa(q: str = Query(None)):
                     let listeDiv = document.getElementById('sepet-listesi');
                     let sayacSpan = document.getElementById('sepet-sayac');
                     let altBar = document.getElementById('sepet-alt-bar');
+                    let wpBtn = document.getElementById('wp-btn');
                     
                     listeDiv.innerHTML = '';
                     let toplamUrun = 0;
-                    let mesajMetni = "Merhaba, aşağıdaki ürünlerden sipariş vermek istiyorum:\\n";
+                    
+                    let satirlar = ["Merhaba, aşağıdaki ürünlerden sipariş vermek istiyorum:\\n"];
 
                     for (let kod in sepet) {{
                         toplamUrun++;
                         let item = sepet[kod];
-                        mesajMetni += "- " + kod + " " + item.ad + " x " + item.adet + " adet\\n";
+                        satirlar.push("📦 " + kod + " - " + item.ad + " (" + item.adet + " adet)");
                         
                         listeDiv.innerHTML += `
                             <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 8px 12px; margin-bottom: 6px; border-radius: 6px; font-size: 13px;">
@@ -145,32 +147,18 @@ def anasayfa(q: str = Query(None)):
                     }}
 
                     sayacSpan.innerText = toplamUrun;
+                    
                     if (toplamUrun > 0) {{
                         altBar.style.display = 'block';
+                        let nl = String.fromCharCode(10);
+                        let mesajMetni = satirlar.join(nl);
+                        let tel = "905555555555"; 
+                        wpBtn.href = "https://wa.me/" + tel + "?text=" + encodeURIComponent(mesajMetni);
                     }} else {{
                         altBar.style.display = 'none';
                         listeDiv.innerHTML = '<p style="text-align:center; color:#64748b; font-size:13px; margin:10px 0;">Sepetiniz boş.</p>';
+                        wpBtn.href = "#";
                     }}
-                    
-                    window.whatsappMesaji = mesajMetni;
-                }}
-
-                function whatsappGonder() {{
-                    let sepet = getSepet();
-                    let mesajMetni = "Merhaba, aşağıdaki ürünlerden sipariş vermek istiyorum:\\n";
-                    let toplam = 0;
-                    for (let kod in sepet) {{
-                        toplam++;
-                        let item = sepet[kod];
-                        mesajMetni += "- " + kod + " " + item.ad + " x " + item.adet + " adet\\n";
-                    }}
-                    if (toplam === 0) {{
-                        alert("Sepetiniz boş!");
-                        return;
-                    }}
-                    let tel = "905555555555"; // Toptancının telefon numarası
-                    let url = "https://wa.me/" + tel + "?text=" + encodeURIComponent(mesajMetni);
-                    window.open(url, '_blank');
                 }}
 
                 window.onload = function() {{
@@ -201,9 +189,9 @@ def anasayfa(q: str = Query(None)):
             <div id="sepet-alt-bar" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: #ffffff; border-top: 1px solid #cbd5e1; padding: 12px 16px; box-shadow: 0 -4px 12px rgba(0,0,0,0.08); max-width: 600px; margin: 0 auto; z-index: 100;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                     <span style="font-weight: 700; font-size: 14px; color: #0f172a;">🛒 Sepetim (<span id="sepet-sayac">0</span> Ürün)</span>
-                    <button type="button" onclick="whatsappGonder()" style="background: #25D366; color: white; border: none; padding: 10px 16px; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer;">
+                    <a id="wp-btn" href="#" target="_blank" style="background: #25D366; color: white; border: none; padding: 10px 16px; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer; text-decoration: none; display: inline-block; text-align: center;">
                         WhatsApp ile Sipariş Gönder 🚀
-                    </button>
+                    </a>
                 </div>
                 <div id="sepet-listesi" style="max-height: 120px; overflow-y: auto; border-top: 1px solid #f1f5f9; padding-top: 6px;"></div>
             </div>
