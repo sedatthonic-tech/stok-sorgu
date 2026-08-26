@@ -32,11 +32,11 @@ def anasayfa(q: str = Query(None)):
                 buton_html = f'''
                 <div style="display: flex; gap: 8px; align-items: center; margin-top: 10px;">
                     <div style="display: flex; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; background: #fff;">
-                        <button onclick="adetDegistir({index}, -1)" style="background: #f1f5f9; border: none; padding: 8px 12px; cursor: pointer; font-weight: bold; font-size: 14px;">-</button>
+                        <button type="button" onclick="adetDegistir({index}, -1)" style="background: #f1f5f9; border: none; padding: 8px 12px; cursor: pointer; font-weight: bold; font-size: 14px;">-</button>
                         <input type="number" id="adet_{index}" value="1" min="1" max="{stok_adet}" style="width: 40px; text-align: center; border: none; font-size: 14px; outline: none;" readonly>
-                        <button onclick="adetDegistir({index}, 1, {stok_adet})" style="background: #f1f5f9; border: none; padding: 8px 12px; cursor: pointer; font-weight: bold; font-size: 14px;">+</button>
+                        <button type="button" onclick="adetDegistir({index}, 1, {stok_adet})" style="background: #f1f5f9; border: none; padding: 8px 12px; cursor: pointer; font-weight: bold; font-size: 14px;">+</button>
                     </div>
-                    <button onclick="sepeteEkle('{urun_kodu}', '{urun_adi}', {index})" 
+                    <button type="button" onclick="sepeteEkle('{urun_kodu}', '{urun_adi}', {index})" 
                             style="flex-grow: 1; background: #0f2744; color: white; border: none; padding: 9px 12px; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer;">
                         Sepete Ekle
                     </button>
@@ -80,7 +80,13 @@ def anasayfa(q: str = Query(None)):
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>B2B Stok Sorgu</title>
             <script>
-                let sepet = JSON.parse(localStorage.getItem('b2b_sepet')) || {{}};
+                function getSepet() {{
+                    return JSON.parse(localStorage.getItem('b2b_sepet')) || {{}};
+                }}
+
+                function saveSepet(sepet) {{
+                    localStorage.setItem('b2b_sepet', JSON.stringify(sepet));
+                }}
 
                 function adetDegistir(index, miktar, maxStok) {{
                     let input = document.getElementById('adet_' + index);
@@ -92,9 +98,10 @@ def anasayfa(q: str = Query(None)):
                 }}
 
                 function sepeteEkle(kod, ad, index) {{
+                    let sepet = getSepet();
                     let adet = parseInt(document.getElementById('adet_' + index).value) || 1;
                     sepet[kod] = {{ ad: ad, adet: adet }};
-                    localStorage.setItem('b2b_sepet', JSON.stringify(sepet));
+                    saveSepet(sepet);
                     sepetiGuncelle();
                     
                     let btn = event.target;
@@ -108,12 +115,14 @@ def anasayfa(q: str = Query(None)):
                 }}
 
                 function sepettenCikar(kod) {{
+                    let sepet = getSepet();
                     delete sepet[kod];
-                    localStorage.setItem('b2b_sepet', JSON.stringify(sepet));
+                    saveSepet(sepet);
                     sepetiGuncelle();
                 }}
 
                 function sepetiGuncelle() {{
+                    let sepet = getSepet();
                     let listeDiv = document.getElementById('sepet-listesi');
                     let sayacSpan = document.getElementById('sepet-sayac');
                     let altBar = document.getElementById('sepet-alt-bar');
@@ -130,7 +139,7 @@ def anasayfa(q: str = Query(None)):
                         listeDiv.innerHTML += `
                             <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 8px 12px; margin-bottom: 6px; border-radius: 6px; font-size: 13px;">
                                 <div><b>${{kod}}</b> - ${{item.ad}} <span style="color:#64748b;">(${{item.adet}} ad)</span></div>
-                                <button onclick="sepettenCikar('${{kod}}')" style="background:none; border:none; color:#b42318; cursor:pointer; font-weight:bold;">Sil</button>
+                                <button type="button" onclick="sepettenCikar('${{kod}}')" style="background:none; border:none; color:#b42318; cursor:pointer; font-weight:bold;">Sil</button>
                             </div>
                         `;
                     }}
@@ -147,8 +156,20 @@ def anasayfa(q: str = Query(None)):
                 }}
 
                 function whatsappGonder() {{
-                    let tel = "905555555555";
-                    let url = "https://wa.me/" + tel + "?text=" + encodeURIComponent(window.whatsappMesaji);
+                    let sepet = getSepet();
+                    let mesajMetni = "Merhaba, aşağıdaki ürünlerden sipariş vermek istiyorum:\\n";
+                    let toplam = 0;
+                    for (let kod in sepet) {{
+                        toplam++;
+                        let item = sepet[kod];
+                        mesajMetni += "- " + kod + " " + item.ad + " x " + item.adet + " adet\\n";
+                    }}
+                    if (toplam === 0) {{
+                        alert("Sepetiniz boş!");
+                        return;
+                    }}
+                    let tel = "905555555555"; // Toptancının telefon numarası
+                    let url = "https://wa.me/" + tel + "?text=" + encodeURIComponent(mesajMetni);
                     window.open(url, '_blank');
                 }}
 
@@ -179,8 +200,8 @@ def anasayfa(q: str = Query(None)):
 
             <div id="sepet-alt-bar" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: #ffffff; border-top: 1px solid #cbd5e1; padding: 12px 16px; box-shadow: 0 -4px 12px rgba(0,0,0,0.08); max-width: 600px; margin: 0 auto; z-index: 100;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span style="font-weight: 700; font-size: 14px; color: #0f2744;">🛒 Sepetim (<span id="sepet-sayac">0</span> Ürün)</span>
-                    <button onclick="whatsappGonder()" style="background: #25D366; color: white; border: none; padding: 10px 16px; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer;">
+                    <span style="font-weight: 700; font-size: 14px; color: #0f172a;">🛒 Sepetim (<span id="sepet-sayac">0</span> Ürün)</span>
+                    <button type="button" onclick="whatsappGonder()" style="background: #25D366; color: white; border: none; padding: 10px 16px; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer;">
                         WhatsApp ile Sipariş Gönder 🚀
                     </button>
                 </div>
