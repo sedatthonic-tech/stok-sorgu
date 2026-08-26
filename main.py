@@ -3,7 +3,6 @@ from fastapi.responses import HTMLResponse
 
 app = FastAPI()
 
-# Sabit stok veritabanı (Vercel'de dosya bulamama sorununu %100 çöker ve uçuk hız sağlar)
 STOKLAR = [
     {"UrunKodu": "CNT-01", "UrunAdi": "310luk Siyah Conta", "Fiyat": 150.0, "StokAdeti": 450},
     {"UrunKodu": "CNT-02", "UrunAdi": "320cük Çelik Conta", "Fiyat": 220.0, "StokAdeti": 0},
@@ -130,8 +129,8 @@ def anasayfa(q: str = Query(None)):
                         
                         listeDiv.innerHTML += `
                             <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 8px 12px; margin-bottom: 6px; border-radius: 6px; font-size: 13px;">
-                                <div><b>${kod}</b> - ${item.ad} <span style="color:#64748b;">(${item.adet} ad)</span></div>
-                                <button onclick="sepettenCikar('${kod}')" style="background:none; border:none; color:#b42318; cursor:pointer; font-weight:bold;">Sil</button>
+                                <div><b>${{kod}}</b> - ${{item.ad}} <span style="color:#64748b;">(${{item.adet}} ad)</span></div>
+                                <button onclick="sepettenCikar('${{kod}}')" style="background:none; border:none; color:#b42318; cursor:pointer; font-weight:bold;">Sil</button>
                             </div>
                         `;
                     }}
