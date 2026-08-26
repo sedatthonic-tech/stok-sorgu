@@ -3,10 +3,11 @@ from fastapi.responses import HTMLResponse
 
 app = FastAPI()
 
+# Fiyatsız, sadece kod, ad ve stok adedinin tutulduğu güvenli veritabanı
 STOKLAR = [
-    {"UrunKodu": "CNT-01", "UrunAdi": "310luk Siyah Conta", "Fiyat": 150.0, "StokAdeti": 450},
-    {"UrunKodu": "CNT-02", "UrunAdi": "320cük Çelik Conta", "Fiyat": 220.0, "StokAdeti": 0},
-    {"UrunKodu": "VLV-05", "UrunAdi": "Pirinç Vana 1/2", "Fiyat": 450.0, "StokAdeti": 12}
+    {"UrunKodu": "CNT-01", "UrunAdi": "310luk Siyah Conta", "StokAdeti": 450},
+    {"UrunKodu": "CNT-02", "UrunAdi": "320cük Çelik Conta", "StokAdeti": 5},
+    {"UrunKodu": "VLV-05", "UrunAdi": "Pirinç Vana 1/2", "StokAdeti": 0}
 ]
 
 @app.get("/", response_class=HTMLResponse)
@@ -21,14 +22,24 @@ def anasayfa(q: str = Query(None)):
         
         for index, row in enumerate(filtreli):
             stok_adet = row.get('StokAdeti', 0)
-            stok_var = stok_adet > 0
             urun_kodu = row.get('UrunKodu', '')
             urun_adi = row.get('UrunAdi', '')
-            fiyat = row.get('Fiyat', 0)
+            
+            # Stok Bandı Mantığı (Güvenlik ve Psikoloji)
+            if stok_adet > 10:
+                stok_durum = "Stokta Var"
+                renk = "#157a3a"  # Yeşil
+                stok_var = True
+            elif stok_adet > 0:
+                stok_durum = "Az Kaldı"
+                renk = "#d97706"  # Turuncu / Amber
+                stok_var = True
+            else:
+                stok_durum = "Tükendi"
+                renk = "#b42318"  # Kırmızı
+                stok_var = False
             
             if stok_var:
-                stok_durum = f"Stokta Var ({stok_adet} adet)"
-                renk = "#157a3a"
                 buton_html = f'''
                 <div style="display: flex; gap: 8px; align-items: center; margin-top: 10px;">
                     <div style="display: flex; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; background: #fff;">
@@ -42,19 +53,12 @@ def anasayfa(q: str = Query(None)):
                     </button>
                 </div>'''
             else:
-                stok_durum = "Tükendi"
-                renk = "#b42318"
                 buton_html = '''
                 <div style="margin-top: 10px;">
                     <button disabled style="width: 100%; background: transparent; border: 1px solid #cbd5e1; color: #94a3b8; padding: 9px; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: not-allowed;">
-                        Tükendi
+                        Tükendi (Sipariş Verilemez)
                     </button>
                 </div>'''
-            
-            try:
-                fiyat_formatli = f"{float(fiyat):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " ₺"
-            except:
-                fiyat_formatli = f"{fiyat} ₺"
 
             sonuclar_html += f"""
             <div style="background: #ffffff; border: 1px solid #e2e8f0; padding: 12px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
@@ -62,9 +66,6 @@ def anasayfa(q: str = Query(None)):
                     <div>
                         <span style="font-size: 11px; font-weight: bold; background: #f1f5f9; color: #0f2744; padding: 2px 6px; border-radius: 4px;">{urun_kodu}</span>
                         <h3 style="margin: 6px 0 0 0; color:#0f172a; font-size: 14px; font-weight: 600;">{urun_adi}</h3>
-                    </div>
-                    <div style="text-align: right;">
-                        <span style="font-size: 15px; font-weight: 700; color:#0f172a; font-variant-numeric: tabular-nums;">{fiyat_formatli}</span>
                     </div>
                 </div>
                 <div style="font-size: 12px; margin-bottom: 4px;">
@@ -131,7 +132,7 @@ def anasayfa(q: str = Query(None)):
                     listeDiv.innerHTML = '';
                     let toplamUrun = 0;
                     
-                    let satirlar = ["Merhaba, aşağıdaki ürünlerden sipariş vermek istiyorum:\\n"];
+                    let satirlar = ["Merhaba, aşağıdaki ürünlerin stok ve güncel fiyatları hakkında bilgi almak istiyorum:\\n"];
 
                     for (let kod in sepet) {{
                         toplamUrun++;
@@ -152,7 +153,7 @@ def anasayfa(q: str = Query(None)):
                         altBar.style.display = 'block';
                         let nl = String.fromCharCode(10);
                         let mesajMetni = satirlar.join(nl);
-                        let tel = "905555555555"; 
+                        let tel = "905555555555"; // Toptancının numarası
                         wpBtn.href = "https://wa.me/" + tel + "?text=" + encodeURIComponent(mesajMetni);
                     }} else {{
                         altBar.style.display = 'none';
@@ -190,7 +191,7 @@ def anasayfa(q: str = Query(None)):
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                     <span style="font-weight: 700; font-size: 14px; color: #0f172a;">🛒 Sepetim (<span id="sepet-sayac">0</span> Ürün)</span>
                     <a id="wp-btn" href="#" target="_blank" style="background: #25D366; color: white; border: none; padding: 10px 16px; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer; text-decoration: none; display: inline-block; text-align: center;">
-                        WhatsApp ile Sipariş Gönder 🚀
+                        WhatsApp ile Bilgi/Teklif İste 🚀
                     </a>
                 </div>
                 <div id="sepet-listesi" style="max-height: 120px; overflow-y: auto; border-top: 1px solid #f1f5f9; padding-top: 6px;"></div>
