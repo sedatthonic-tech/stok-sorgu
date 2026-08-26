@@ -8,24 +8,43 @@ app = FastAPI()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 EXCEL_DOSYASI = os.path.join(BASE_DIR, "stoklar.xlsx")
 
+# Bellek içi cache (Uygulama bir kez açıldığında Excel verisi burada saklanır, her aramada Excel baştan okunmaz!)
+_stok_cache = None
+
+def verileri_al():
+    global _stok_cache
+    if _stok_cache is None:
+        try:
+            df = pd.read_excel(EXCEL_DOSYASI)
+            # DataFrame'i hızlı arama için Python sözlük listesine çeviriyoruz
+            _stok_cache = df.to_dict(orient="records")
+        except:
+            _stok_cache = []
+    return _stok_cache
+
 @app.get("/", response_class=HTMLResponse)
 def anasayfa(q: str = Query(None)):
-    try:
-        df = pd.read_excel(EXCEL_DOSYASI)
-    except Exception as e:
-        return f"<html><body><h2>Excel okunamadı veya stoklar.xlsx bulunamadı.</h2><p>{e}</p></body></html>"
+    stoklar = verileri_al()
     
     sonuclar_html = ""
     if q:
-        filtreli = df[df['UrunAdi'].str.contains(q, case=False, na=False) | df['UrunKodu'].str.contains(q, case=False, na=False)]
-        for index, row in filtreli.iterrows():
-            stok_adet = row['StokAdeti']
+        q_lower = q.lower()
+        # Bellek üzerinden çok hızlı filtreleme (Pandas maliyeti yok)
+        filtreli = [
+            row for row in stoklar 
+            if q_lower in str(row.get('UrunAdi', '')).lower() or q_lower in str(row.get('UrunKodu', '')).lower()
+        ]
+        
+        for index, row in enumerate(filtreli):
+            stok_adet = row.get('StokAdeti', 0)
             stok_var = stok_adet > 0
+            urun_kodu = row.get('UrunKodu', '')
+            urun_adi = row.get('UrunAdi', '')
+            fiyat = row.get('Fiyat', 0)
             
             if stok_var:
                 stok_durum = f"Stokta Var ({stok_adet} adet)"
                 renk = "#157a3a"
-                # Adet seçici ve sepete ekleme butonları
                 buton_html = f'''
                 <div style="display: flex; gap: 8px; align-items: center; margin-top: 10px;">
                     <div style="display: flex; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; background: #fff;">
@@ -33,7 +52,7 @@ def anasayfa(q: str = Query(None)):
                         <input type="number" id="adet_{index}" value="1" min="1" max="{stok_adet}" style="width: 40px; text-align: center; border: none; font-size: 14px; outline: none;" readonly>
                         <button onclick="adetDegistir({index}, 1, {stok_adet})" style="background: #f1f5f9; border: none; padding: 8px 12px; cursor: pointer; font-weight: bold; font-size: 14px;">+</button>
                     </div>
-                    <button onclick="sepeteEkle('{row['UrunKodu']}', '{row['UrunAdi']}', {index})" 
+                    <button onclick="sepeteEkle('{urun_kodu}', '{urun_adi}', {index})" 
                             style="flex-grow: 1; background: #0f2744; color: white; border: none; padding: 9px 12px; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer;">
                         Sepete Ekle
                     </button>
@@ -49,16 +68,16 @@ def anasayfa(q: str = Query(None)):
                 </div>'''
             
             try:
-                fiyat_formatli = f"{float(row['Fiyat']):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " ₺"
+                fiyat_formatli = f"{float(fiyat):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " ₺"
             except:
-                fiyat_formatli = f"{row['Fiyat']} ₺"
+                fiyat_formatli = f"{fiyat} ₺"
 
             sonuclar_html += f"""
             <div style="background: #ffffff; border: 1px solid #e2e8f0; padding: 12px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
                     <div>
-                        <span style="font-size: 11px; font-weight: bold; background: #f1f5f9; color: #0f2744; padding: 2px 6px; border-radius: 4px;">{row['UrunKodu']}</span>
-                        <h3 style="margin: 6px 0 0 0; color:#0f172a; font-size: 14px; font-weight: 600;">{row['UrunAdi']}</h3>
+                        <span style="font-size: 11px; font-weight: bold; background: #f1f5f9; color: #0f2744; padding: 2px 6px; border-radius: 4px;">{urun_kodu}</span>
+                        <h3 style="margin: 6px 0 0 0; color:#0f172a; font-size: 14px; font-weight: 600;">{urun_adi}</h3>
                     </div>
                     <div style="text-align: right;">
                         <span style="font-size: 15px; font-weight: 700; color:#0f172a; font-variant-numeric: tabular-nums;">{fiyat_formatli}</span>
@@ -94,7 +113,6 @@ def anasayfa(q: str = Query(None)):
                     localStorage.setItem('b2b_sepet', JSON.stringify(sepet));
                     sepetiGuncelle();
                     
-                    // Görsel geri bildirim
                     let btn = event.target;
                     let eskiText = btn.innerText;
                     btn.innerText = "Eklendi ✓";
@@ -145,7 +163,7 @@ def anasayfa(q: str = Query(None)):
                 }}
 
                 function whatsappGonder() {{
-                    let tel = "905555555555"; // Buraya toptancının WhatsApp numarası gelecek
+                    let tel = "905555555555";
                     let url = "https://wa.me/" + tel + "?text=" + encodeURIComponent(window.whatsappMesaji);
                     window.open(url, '_blank');
                 }}
@@ -157,7 +175,6 @@ def anasayfa(q: str = Query(None)):
         </head>
         <body style="font-family: ui-sans-serif, system-ui, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 0 0 80px 0; background-color: #f6f7f9; color: #0f172a;">
             
-            <!-- Yapışkan Üst Şerit -->
             <div style="position: sticky; top: 0; background: #ffffff; z-index: 10; padding: 12px 16px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
                 <span style="font-weight: 700; font-size: 15px; color: #0f2744;">📦 Toptan Stok Paneli</span>
                 <span style="font-size: 11px; color: #64748b; background: #f1f5f9; padding: 4px 8px; border-radius: 4px;">Güncelleme: Bugün</span>
@@ -176,7 +193,6 @@ def anasayfa(q: str = Query(None)):
                 </div>
             </div>
 
-            <!-- Sabit Alt Sepet Çubuğu -->
             <div id="sepet-alt-bar" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: #ffffff; border-top: 1px solid #cbd5e1; padding: 12px 16px; box-shadow: 0 -4px 12px rgba(0,0,0,0.08); max-width: 600px; margin: 0 auto; z-index: 100;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                     <span style="font-weight: 700; font-size: 14px; color: #0f2744;">🛒 Sepetim (<span id="sepet-sayac">0</span> Ürün)</span>

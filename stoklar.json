@@ -1,0 +1,5 @@
+[
+    {"UrunKodu": "CNT-01", "UrunAdi": "310luk Siyah Conta", "Fiyat": 150.0, "StokAdeti": 450},
+    {"UrunKodu": "CNT-02", "UrunAdi": "320cük Çelik Conta", "Fiyat": 220.0, "StokAdeti": 0},
+    {"UrunKodu": "VLV-05", "UrunAdi": "Pirinç Vana 1/2", "Fiyat": 450.0, "StokAdeti": 12}
+  ]
