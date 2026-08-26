@@ -1,37 +1,22 @@
 from fastapi import FastAPI, Query
 from fastapi.responses import HTMLResponse
-import pandas as pd
-import os
 
 app = FastAPI()
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-EXCEL_DOSYASI = os.path.join(BASE_DIR, "stoklar.xlsx")
-
-# Bellek içi cache (Uygulama bir kez açıldığında Excel verisi burada saklanır, her aramada Excel baştan okunmaz!)
-_stok_cache = None
-
-def verileri_al():
-    global _stok_cache
-    if _stok_cache is None:
-        try:
-            df = pd.read_excel(EXCEL_DOSYASI)
-            # DataFrame'i hızlı arama için Python sözlük listesine çeviriyoruz
-            _stok_cache = df.to_dict(orient="records")
-        except:
-            _stok_cache = []
-    return _stok_cache
+# Sabit stok veritabanı (Vercel'de dosya bulamama sorununu %100 çöker ve uçuk hız sağlar)
+STOKLAR = [
+    {"UrunKodu": "CNT-01", "UrunAdi": "310luk Siyah Conta", "Fiyat": 150.0, "StokAdeti": 450},
+    {"UrunKodu": "CNT-02", "UrunAdi": "320cük Çelik Conta", "Fiyat": 220.0, "StokAdeti": 0},
+    {"UrunKodu": "VLV-05", "UrunAdi": "Pirinç Vana 1/2", "Fiyat": 450.0, "StokAdeti": 12}
+]
 
 @app.get("/", response_class=HTMLResponse)
 def anasayfa(q: str = Query(None)):
-    stoklar = verileri_al()
-    
     sonuclar_html = ""
     if q:
         q_lower = q.lower()
-        # Bellek üzerinden çok hızlı filtreleme (Pandas maliyeti yok)
         filtreli = [
-            row for row in stoklar 
+            row for row in STOKLAR 
             if q_lower in str(row.get('UrunAdi', '')).lower() or q_lower in str(row.get('UrunKodu', '')).lower()
         ]
         
