@@ -5,7 +5,6 @@ import os
 
 app = FastAPI()
 
-# Vercel'de dosya yolunu tam ve eksiksiz bulmak için:
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 EXCEL_DOSYASI = os.path.join(BASE_DIR, "stoklar.xlsx")
 
@@ -55,4 +54,3 @@ def anasayfa(q: str = Query(None)):
     </html>
     """
     return html_icerik
-    
